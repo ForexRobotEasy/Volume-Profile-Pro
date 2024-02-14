@@ -1,0 +1,95 @@
+mql5
+//+------------------------------------------------------------------+
+//|                                                       Volume Profile Pro |
+//|                                   https://www.forexroboteasy.com |
+//|                                                      Forex Robot Easy Team |
+//+------------------------------------------------------------------+
+
+// Include necessary libraries and define variables
+#include <Trade\TradingFunctions.mqh>
+#include <ChartObjects\ChartObjectsHistogram.mqh>
+
+input int timePeriod = PERIOD_H1; // Time period for volume profile calculation
+input int barCount = 100; // Number of bars to include in volume profile calculation
+input color histogramColor = clrBlue; // Color of the volume profile histogram
+input uint histogramWidth = 3; // Width of the volume profile histogram bars
+
+// Define global variables
+int profileHandle; // Handle for volume profile
+bool isProfileDisplayed = false; // Flag to check if volume profile is displayed
+
+//+------------------------------------------------------------------+
+//| Custom indicator initialization function                         |
+//+------------------------------------------------------------------+
+int OnInit()
+{
+   // Calculate volume profile for the specified time period and number of bars
+   profileHandle = iVolumeProfile(NULL, timePeriod, barCount);
+
+   // Check if volume profile calculation was successful
+   if(profileHandle == INVALID_HANDLE)
+   {
+      Print('Failed to calculate volume profile!');
+      return INIT_FAILED;
+   }
+
+   // Create histogram object for volume profile display
+   CChartObjectHistogram histogram;
+   histogram.Create(0, 'Volume Profile', 0, 0);
+   histogram.Color = histogramColor;
+   histogram.Width = histogramWidth;
+
+   return INIT_SUCCEEDED;
+}
+
+//+------------------------------------------------------------------+
+//| Custom indicator deinitialization function                       |
+//+------------------------------------------------------------------+
+void OnDeinit(const int reason)
+{
+   // Delete histogram object
+   CChartObjectHistogram histogram;
+   histogram.Delete();
+}
+
+//+------------------------------------------------------------------+
+//| Custom indicator iteration function                              |
+//+------------------------------------------------------------------+
+int OnCalculate(const int ratesTotal, const int prev_calculated, const datetime &time[], const double &open[], const double &high[], const double &low[], const double &close[], const long &tick_volume[], const long &volume[], const int &spread[])
+{
+   // Check if volume profile is already displayed
+   if(!isProfileDisplayed)
+   {
+      // Calculate and display volume profile
+      DisplayVolumeProfile(profileHandle);
+
+      // Set flag to indicate volume profile is displayed
+      isProfileDisplayed = true;
+   }
+
+   return ratesTotal;
+}
+
+//+------------------------------------------------------------------+
+//| Function to calculate and display volume profile                  |
+//+------------------------------------------------------------------+
+void DisplayVolumeProfile(const int profileHandle)
+{
+   // Get the number of price levels in the volume profile
+   int levelsCount = iVolumeProfileInteger(profileHandle, MODE_LEVELS_COUNT);
+
+   // Loop through each price level
+   for(int i = 0; i < levelsCount; i++)
+   {
+      // Get the volume for the current price level
+      double volume = iVolumeProfileInteger(profileHandle, i, MODE_VOLUME);
+
+      // Get the price range for the current price level
+      double priceMin = iVolumeProfileDouble(profileHandle, i, MODE_PRICE_MIN);
+      double priceMax = iVolumeProfileDouble(profileHandle, i, MODE_PRICE_MAX);
+
+      // Draw a histogram bar for the current price level
+      CChartObjectHistogram histogram;
+      histogram.AddValue(priceMin, priceMax, volume);
+   }
+}
